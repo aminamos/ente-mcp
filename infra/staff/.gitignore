@@ -1,0 +1,8 @@
+# Local env files
+.env*.local
+
+# tsc
+*.tsbuildinfo
+
+# Vite
+dist

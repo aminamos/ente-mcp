@@ -1,0 +1,12 @@
+.env
+.env.*.local
+
+app/
+out
+dist/
+
+build/vips*
+build/onnxruntime/
+build/napi/
+
+rust-bindings/

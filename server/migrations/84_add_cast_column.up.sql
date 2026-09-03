@@ -1,0 +1,4 @@
+BEGIN;
+DELETE FROM casting;
+ALTER TABLE casting ADD COLUMN ip text NOT NULL;
+COMMIT;
