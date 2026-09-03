@@ -1,0 +1,27 @@
+# Copy to config.local.toml (same directory) or
+# %APPDATA%/ente-mcp/config.toml / ~/.config/ente-mcp/config.toml
+#
+# Each [clients.<name>] is a desktop profile or an official-CLI app.
+# Do not point two Ente desktops at the same profile directory.
+
+default_client = "photos"
+ente_cli = "ente"
+
+[clients.photos]
+app = "photos"
+process = "ente"
+profile = "ente"
+# queue = "~/Ente/Inbox"
+
+[clients.auth]
+app = "auth"
+
+[clients.locker]
+app = "locker"
+
+# Self-hosted or a second desktop profile:
+# [clients.museum]
+# app = "photos"
+# process = "entedesktop2"
+# profile = "entedesktop2"
+# queue = "~/Ente-museum/Inbox"

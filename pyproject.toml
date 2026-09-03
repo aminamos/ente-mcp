@@ -1,0 +1,40 @@
+[project]
+name = "ente-mcp"
+version = "0.2.0"
+description = "Unofficial CLI and MCP for Ente Photos, Auth, and Locker."
+readme = "README.md"
+license = "MIT"
+requires-python = ">=3.11"
+authors = [{ name = "Amin Amos" }]
+keywords = ["ente", "photos", "auth", "locker", "mcp", "cli"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Environment :: Console",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Topic :: Utilities",
+]
+dependencies = ["mcp[cli]>=1.10,<2"]
+
+[project.urls]
+Homepage = "https://github.com/aminamos/ente-mcp"
+Source = "https://github.com/aminamos/ente-mcp"
+Issues = "https://github.com/aminamos/ente-mcp/issues"
+
+[project.scripts]
+ente-mcp = "ente_mcp.server:main"
+ente-agent = "ente_mcp.cli:main"
+
+[project.optional-dependencies]
+dev = ["pytest>=8"]
+
+[build-system]
+requires = ["hatchling>=1.25"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/ente_mcp"]
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]
