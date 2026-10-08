@@ -5,7 +5,7 @@ from typing import Any
 from mcp.server.fastmcp import FastMCP
 
 from ente_mcp.config import Config, get_client, load_config
-from ente_mcp import official, photos
+from ente_mcp import museum, official, photos
 from ente_mcp.process import process_running
 
 mcp = FastMCP(
@@ -126,7 +126,8 @@ def ente_export(
     emails: list[str] | None = None,
     exclude_albums: list[str] | None = None,
 ) -> dict[str, Any]:
-    """Run official ente export. Photos albums and Auth codes; Locker is skipped by ente CLI."""
+    """Run official ente export. Photos albums and Auth codes; Locker is skipped by ente CLI.
+    Desktop uploaders (etne/ente) are stopped first and resume via ensure_uploader after."""
     return official.export_data(
         _cfg().ente_cli,
         shared=shared,
@@ -163,6 +164,95 @@ def ente_locker_status() -> dict[str, Any]:
             "There is no locker item export in the official CLI yet."
         ),
     }
+
+
+@mcp.tool()
+def ente_account() -> dict[str, Any]:
+    """Museum account intel: storage usage/quota, subscription, locker usage, 2FA status. Read-only."""
+    return museum.account_overview(_cfg())
+
+
+@mcp.tool()
+def ente_sessions() -> dict[str, Any]:
+    """List active museum sessions (tokens redacted). Read-only."""
+    return museum.sessions_list(_cfg())
+
+
+@mcp.tool()
+def ente_terminate_session(session_token: str) -> dict[str, Any]:
+    """Revoke one museum session by its full token (copy it from the Ente web app)."""
+    return museum.session_terminate(_cfg(), session_token)
+
+
+@mcp.tool()
+def ente_collections() -> dict[str, Any]:
+    """Album inventory: IDs, types, share rosters, public-link flags. Names stay encrypted. Read-only."""
+    return museum.collections_inventory(_cfg())
+
+
+@mcp.tool()
+def ente_trash(limit: int = 100) -> dict[str, Any]:
+    """List trashed files (IDs + deletion deadlines). Read-only."""
+    return museum.trash_overview(_cfg(), limit=limit)
+
+
+@mcp.tool()
+def ente_trash_files(items: list[dict[str, Any]]) -> dict[str, Any]:
+    """Move files to trash. Each item: {"fileID": int, "collectionID": int}."""
+    return museum.trash_move(_cfg(), items)
+
+
+@mcp.tool()
+def ente_delete_trash(file_ids: list[int], confirm: bool = False) -> dict[str, Any]:
+    """Permanently delete trashed files. Requires confirm=True."""
+    return museum.trash_delete(_cfg(), file_ids, confirm=confirm)
+
+
+@mcp.tool()
+def ente_empty_trash(confirm: bool = False, last_updated_at: int = 0) -> dict[str, Any]:
+    """Empty trash up to last_updated_at (0 = everything; ente_trash reports maxUpdatedAt). Requires confirm=True."""
+    return museum.trash_empty(_cfg(), confirm=confirm, last_updated_at=last_updated_at)
+
+
+@mcp.tool()
+def ente_remove_files(collection_id: int, file_ids: list[int]) -> dict[str, Any]:
+    """Remove files from an album in bulk. Files stay in the library."""
+    return museum.collection_remove_files(_cfg(), collection_id, file_ids)
+
+
+@mcp.tool()
+def ente_unshare(collection_id: int, email: str) -> dict[str, Any]:
+    """Remove one sharee from an album."""
+    return museum.collection_unshare(_cfg(), collection_id, email)
+
+
+@mcp.tool()
+def ente_leave_album(collection_id: int) -> dict[str, Any]:
+    """Leave a shared album."""
+    return museum.collection_leave(_cfg(), collection_id)
+
+
+@mcp.tool()
+def ente_public_link(
+    collection_id: int,
+    action: str = "create",
+    valid_till: int = 0,
+    device_limit: int = 0,
+    enable_collect: bool = False,
+    enable_join: bool = False,
+    enable_download: bool = True,
+) -> dict[str, Any]:
+    """Create, update, or delete an album's public link. action is create, update, or delete."""
+    return museum.public_link(
+        _cfg(),
+        collection_id,
+        action,
+        valid_till=valid_till,
+        device_limit=device_limit,
+        enable_collect=enable_collect,
+        enable_join=enable_join,
+        enable_download=enable_download,
+    )
 
 
 def main() -> None:

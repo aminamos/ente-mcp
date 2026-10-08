@@ -7,6 +7,12 @@
 default_client = "photos"
 ente_cli = "ente"
 
+# Museum server ops (trash, albums, links, account). Token comes from
+# ENTE_MCP_TOKEN or `ente account get-token --email <email>`.
+# [museum]
+# endpoint = "https://api.ente.com"
+# email = "you@example.com"
+
 [clients.photos]
 app = "photos"
 process = "ente"
@@ -22,6 +28,6 @@ app = "locker"
 # Self-hosted or a second desktop profile:
 # [clients.museum]
 # app = "photos"
-# process = "entedesktop2"
-# profile = "entedesktop2"
+# process = "etne"
+# profile = "etne"
 # queue = "~/Ente-museum/Inbox"

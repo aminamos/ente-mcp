@@ -9,3 +9,6 @@ build/
 config.local.toml
 .coverage
 htmlcov/
+state/
+downloads/
+.venv-classify/

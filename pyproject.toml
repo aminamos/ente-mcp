@@ -1,6 +1,6 @@
 [project]
 name = "ente-mcp"
-version = "0.2.0"
+version = "0.3.0"
 description = "Unofficial CLI and MCP for Ente Photos, Auth, and Locker."
 readme = "README.md"
 license = "MIT"

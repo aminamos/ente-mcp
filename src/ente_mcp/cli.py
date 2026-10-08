@@ -82,6 +82,40 @@ def build_parser() -> argparse.ArgumentParser:
     locker_sub = locker_p.add_subparsers(dest="locker_cmd", required=True)
     locker_sub.add_parser("status", help="Locker accounts; export is not supported")
 
+    museum_p = sub.add_parser("museum", help="Museum server ops (trash, albums, links, account)")
+    museum_sub = museum_p.add_subparsers(dest="museum_cmd", required=True)
+    museum_sub.add_parser("account", help="Storage, subscription, locker usage, 2FA (read-only)")
+    museum_sub.add_parser("sessions", help="List active sessions (read-only)")
+    terminate = museum_sub.add_parser("terminate-session", help="Revoke one session by token")
+    terminate.add_argument("session_token")
+    museum_sub.add_parser("collections", help="Album inventory (read-only)")
+    trash_p = museum_sub.add_parser("trash", help="List trashed files (read-only)")
+    trash_p.add_argument("--limit", type=int, default=100)
+    trash_files = museum_sub.add_parser("trash-files", help="Move files to trash")
+    trash_files.add_argument("items", nargs="+", help="FILEID:COLLECTIONID pairs")
+    delete_trash = museum_sub.add_parser("delete-trash", help="Permanently delete trashed files")
+    delete_trash.add_argument("file_ids", nargs="+", type=int)
+    delete_trash.add_argument("--confirm", action="store_true")
+    empty_trash = museum_sub.add_parser("empty-trash", help="Empty trash")
+    empty_trash.add_argument("--confirm", action="store_true")
+    empty_trash.add_argument("--last-updated-at", type=int, default=0)
+    remove_files = museum_sub.add_parser("remove-files", help="Remove files from an album")
+    remove_files.add_argument("collection_id", type=int)
+    remove_files.add_argument("file_ids", nargs="+", type=int)
+    unshare = museum_sub.add_parser("unshare", help="Remove one sharee from an album")
+    unshare.add_argument("collection_id", type=int)
+    unshare.add_argument("email")
+    leave = museum_sub.add_parser("leave", help="Leave a shared album")
+    leave.add_argument("collection_id", type=int)
+    link = museum_sub.add_parser("public-link", help="Create/update/delete an album public link")
+    link.add_argument("collection_id", type=int)
+    link.add_argument("--action", choices=("create", "update", "delete"), default="create")
+    link.add_argument("--valid-till", type=int, default=0)
+    link.add_argument("--device-limit", type=int, default=0)
+    link.add_argument("--enable-collect", action="store_true")
+    link.add_argument("--enable-join", action="store_true")
+    link.add_argument("--no-download", dest="enable_download", action="store_false", default=True)
+
     return parser
 
 
@@ -210,6 +244,70 @@ def main(argv: list[str] | None = None) -> int:
             },
             as_json,
         )
+
+    if args.cmd == "museum":
+        from ente_mcp import museum
+
+        if args.museum_cmd == "account":
+            return _print(museum.account_overview(config), as_json)
+        if args.museum_cmd == "sessions":
+            return _print(museum.sessions_list(config), as_json)
+        if args.museum_cmd == "terminate-session":
+            return _print(museum.session_terminate(config, args.session_token), as_json)
+        if args.museum_cmd == "collections":
+            return _print(museum.collections_inventory(config), as_json)
+        if args.museum_cmd == "trash":
+            return _print(museum.trash_overview(config, limit=args.limit), as_json)
+        if args.museum_cmd == "trash-files":
+            items = []
+            for raw in args.items:
+                try:
+                    file_id, collection_id = raw.split(":", 1)
+                    items.append(
+                        {"fileID": int(file_id), "collectionID": int(collection_id)}
+                    )
+                except ValueError:
+                    return _print(
+                        {"ok": False, "error": f"bad item {raw!r}; use FILEID:COLLECTIONID"},
+                        as_json,
+                    )
+            return _print(museum.trash_move(config, items), as_json)
+        if args.museum_cmd == "delete-trash":
+            return _print(
+                museum.trash_delete(config, args.file_ids, confirm=args.confirm), as_json
+            )
+        if args.museum_cmd == "empty-trash":
+            return _print(
+                museum.trash_empty(
+                    config, confirm=args.confirm, last_updated_at=args.last_updated_at
+                ),
+                as_json,
+            )
+        if args.museum_cmd == "remove-files":
+            return _print(
+                museum.collection_remove_files(config, args.collection_id, args.file_ids),
+                as_json,
+            )
+        if args.museum_cmd == "unshare":
+            return _print(
+                museum.collection_unshare(config, args.collection_id, args.email), as_json
+            )
+        if args.museum_cmd == "leave":
+            return _print(museum.collection_leave(config, args.collection_id), as_json)
+        if args.museum_cmd == "public-link":
+            return _print(
+                museum.public_link(
+                    config,
+                    args.collection_id,
+                    args.action,
+                    valid_till=args.valid_till,
+                    device_limit=args.device_limit,
+                    enable_collect=args.enable_collect,
+                    enable_join=args.enable_join,
+                    enable_download=args.enable_download,
+                ),
+                as_json,
+            )
 
     parser.print_help()
     return 1

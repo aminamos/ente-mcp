@@ -9,6 +9,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+from ente_mcp import mutex
+
 ENTE_CLI_RELEASES = "https://github.com/ente-io/ente/releases?q=tag%3Acli-v0"
 # Historical/current org slugs both exist in docs; prefer ente-io then ente.
 ENTE_CLI_RELEASES_ALT = "https://github.com/ente/ente/releases?q=tag%3Acli-v0"
@@ -32,6 +34,10 @@ def find_ente_cli(configured: str = "ente") -> str | None:
         found = shutil.which(candidate)
         if found:
             return found
+        # An explicit name that resolves to nothing must not silently fall
+        # back to some other "ente" on PATH.
+        if candidate.strip().lower() != "ente":
+            return None
     return shutil.which("ente")
 
 
@@ -142,10 +148,57 @@ def export_data(
     if exclude_albums:
         args.extend(["--exclude-albums", ",".join(exclude_albums)])
     wait = timeout if timeout > 0 else 3600
-    result = run_ente(configured, args, timeout=wait)
+    binary = find_ente_cli(configured)
+    if binary is None:
+        return {
+            "ok": False,
+            "error": "official ente CLI not found on PATH",
+            "hint": f"Install from {ENTE_CLI_RELEASES} or set ENTE_CLI / ente_cli in config.",
+            "releases": ENTE_CLI_RELEASES_ALT,
+        }
+    # Export and the desktop uploader cannot run together (machine freezes).
+    # export_session() stops etne/ente desktops; ensure_uploader.py resumes
+    # the uploader once the marker pid is gone.
+    try:
+        with mutex.export_session() as session:
+            flags = getattr(subprocess, "CREATE_NO_WINDOW", 0) if sys.platform == "win32" else 0
+            try:
+                proc = subprocess.Popen(
+                    [binary, *args],
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE,
+                    text=True,
+                    creationflags=flags,
+                )
+            except OSError as exc:
+                return {"ok": False, "error": f"failed to start {binary}: {exc}", "binary": binary}
+            session["child"] = proc.pid
+            mutex.write_marker(session["parent"], proc.pid)
+            try:
+                stdout, stderr = proc.communicate(timeout=wait)
+            except subprocess.TimeoutExpired:
+                mutex.kill_tree(proc.pid)
+                return {
+                    "ok": False,
+                    "error": f"ente {' '.join(args)} timed out after {wait}s",
+                    "binary": binary,
+                    "exportSession": session,
+                }
+            result: dict[str, Any] = {
+                "ok": proc.returncode == 0,
+                "code": proc.returncode,
+                "binary": binary,
+                "args": args,
+                "stdout": (stdout or "").strip(),
+                "stderr": (stderr or "").strip(),
+            }
+    except mutex.ExportBusy as exc:
+        return {"ok": False, "error": str(exc), "hint": "Wait for the running export to finish."}
+    result["exportSession"] = session
     result["note"] = (
         "Official CLI exports Photos albums and Auth codes (ente_auth.txt). "
-        "Locker export is not supported by ente CLI."
+        "Locker export is not supported by ente CLI. "
+        "Desktop uploaders were stopped for the export and resume via ensure_uploader."
     )
     return result
 

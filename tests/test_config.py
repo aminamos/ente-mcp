@@ -15,8 +15,8 @@ default_client = "museum"
 
 [clients.museum]
 app = "photos"
-process = "entedesktop2"
-profile = "entedesktop2"
+process = "etne"
+profile = "etne"
 queue = "E:/tmp/ente-queue"
 """,
         encoding="utf-8",
@@ -25,7 +25,7 @@ queue = "E:/tmp/ente-queue"
     monkeypatch.delenv("ENTE_MCP_CLIENT", raising=False)
     loaded = load_config()
     assert loaded.default_client == "museum"
-    assert loaded.clients["museum"].process == "entedesktop2"
+    assert loaded.clients["museum"].process == "etne"
     assert loaded.config_path == cfg
 
 

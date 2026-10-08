@@ -113,6 +113,10 @@ def safe_album(album: str) -> str:
     name = (album or "Inbox").strip()
     if not name or name in {".", ".."} or "/" in name or "\\" in name:
         raise ValueError("album must be a single folder name")
+    # Ente's locked Hidden items collection is named ".hidden".
+    # A folder named "Hidden" creates a *visible* album in All.
+    if name.casefold() in {"hidden", "hidden items", ".hidden"}:
+        return ".hidden"
     return name
 
 

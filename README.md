@@ -46,11 +46,27 @@ ente-agent photos ensure-watch --folder ~/Ente/Inbox --mapping parent
 ente-agent export
 ente-agent auth decrypt encrypted.json decrypted.txt
 ente-agent locker status
+
+ente-agent museum account
+ente-agent museum trash --limit 20
+ente-agent museum collections
+```
+
+Museum ops talk to the Ente server directly (no desktop needed). Auth is the
+official CLI session: set `[museum] email` so `ente account get-token` works,
+or export `ENTE_MCP_TOKEN`. Endpoint defaults to `https://api.ente.com`
+(`[museum] endpoint` / `ENTE_MCP_MUSEUM` for self-hosted). Only plaintext
+server state is used — album/file names stay encrypted and are never
+decrypted here; destructive calls (`delete-trash`, `empty-trash`) need
+`--confirm`. Sharing someone *new* to an album, restoring trash, and
+uploading need E2EE keys, so they stay in the official apps.
 ```
 
 `collectionMapping=parent` → album name is the parent folder of the file. `root` → one album named after the watch folder.
 
 Ente skips archives, checksums, `txt`, `html`, `xmp`, `db`, and dotfiles — same list as desktop Photos.
+
+`ente export` and desktop watch-folder uploads cannot run at the same time (the machine freezes). `ente-agent export` / `ente_export` stop `etne.exe`/`ente.exe` desktops first and hold `state/export-active` for the run; `scripts/ensure_uploader.py` pauses while that marker's pid is alive (sweeping stale markers), so uploads resume on their own. Only one export runs at a time — a second caller gets `ExportBusy`.
 
 ## MCP (`ente-mcp`)
 
@@ -68,6 +84,15 @@ Stdio server. Tools:
 | `ente_export` | Photos + Auth via official CLI |
 | `ente_auth_decrypt` | Auth (writes a file; does not print TOTP secrets) |
 | `ente_locker_status` | Locker accounts; export not supported |
+| `ente_account` | Museum account: usage/quota, subscription, locker, 2FA (read-only) |
+| `ente_sessions` / `ente_terminate_session` | Museum sessions (tokens redacted) |
+| `ente_collections` | Album IDs, types, sharees, public-link flags (names encrypted) |
+| `ente_trash` | Trashed file IDs + deletion deadlines |
+| `ente_trash_files` | Move files to trash (`{"fileID", "collectionID"}`) |
+| `ente_delete_trash` / `ente_empty_trash` | Permanent delete / empty (`confirm=True`) |
+| `ente_remove_files` | Bulk-remove files from an album |
+| `ente_unshare` / `ente_leave_album` | Sharing management (no E2EE needed) |
+| `ente_public_link` | Create/update/delete an album public link |
 
 Example MCP config:
 
@@ -101,9 +126,13 @@ app = "photos"
 process = "ente"
 profile = "ente"
 queue = "~/Ente/Inbox"
+
+[museum]
+endpoint = "https://api.ente.com"
+email = "you@example.com"
 ```
 
-Env: `ENTE_CLI`, `ENTE_MCP_CLIENT`, `ENTE_MCP_CONFIG`.
+Env: `ENTE_CLI`, `ENTE_MCP_CLIENT`, `ENTE_MCP_CONFIG`, `ENTE_MCP_MUSEUM`, `ENTE_MCP_TOKEN`.
 
 Do **not** write `watch-status.json` while that Ente process is running.
 

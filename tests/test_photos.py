@@ -21,6 +21,9 @@ def test_safe_album_rejects_paths() -> None:
         safe_album("a/b")
     with pytest.raises(ValueError):
         safe_album("..")
+    assert safe_album("Hidden") == ".hidden"
+    assert safe_album("hidden items") == ".hidden"
+    assert safe_album(".hidden") == ".hidden"
 
 
 def test_is_media_matches_desktop_ignore_list(tmp_path: Path) -> None:

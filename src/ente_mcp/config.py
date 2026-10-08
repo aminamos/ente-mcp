@@ -39,7 +39,8 @@ class Config:
     ente_cli: str
     clients: dict[str, Client]
     config_path: Path | None
-
+    museum_endpoint: str = "https://api.ente.com"
+    museum_email: str = ""
 
 def _default_clients() -> dict[str, Client]:
     return {
@@ -88,6 +89,8 @@ def load_config() -> Config:
     clients = _default_clients()
     default_client = "photos"
     ente_cli = os.environ.get("ENTE_CLI", "ente")
+    museum_endpoint = os.environ.get("ENTE_MCP_MUSEUM", "") or "https://api.ente.com"
+    museum_email = ""
     used: Path | None = None
     env_path = os.environ.get("ENTE_MCP_CONFIG")
     candidates = [Path(env_path).expanduser()] if env_path else config_search_paths()
@@ -99,6 +102,13 @@ def load_config() -> Config:
         default_client = str(data.get("default_client") or default_client)
         if data.get("ente_cli"):
             ente_cli = str(data["ente_cli"])
+        raw_museum = data.get("museum") or {}
+        if not isinstance(raw_museum, dict):
+            raise ValueError(f"{path}: museum must be a table")
+        if raw_museum.get("endpoint"):
+            museum_endpoint = str(raw_museum["endpoint"]).rstrip("/") or museum_endpoint
+        if raw_museum.get("email"):
+            museum_email = str(raw_museum["email"]).strip()
         raw_clients = data.get("clients") or {}
         if not isinstance(raw_clients, dict):
             raise ValueError(f"{path}: clients must be a table")
@@ -120,6 +130,8 @@ def load_config() -> Config:
         ente_cli=ente_cli,
         clients=clients,
         config_path=used,
+        museum_endpoint=museum_endpoint,
+        museum_email=museum_email,
     )
 
 
